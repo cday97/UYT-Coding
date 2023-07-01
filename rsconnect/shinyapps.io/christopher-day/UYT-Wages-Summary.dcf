@@ -1,0 +1,13 @@
+name: UYT-Wages-Summary
+title: UYT-Wages-Summary
+username:
+account: christopher-day
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9381931
+bundleId: 7400245
+url: https://christopher-day.shinyapps.io/UYT-Wages-Summary/
+when: 1688006305.98477
+lastSyncTime: 1688006305.98482
+asMultiple: FALSE
+asStatic: FALSE

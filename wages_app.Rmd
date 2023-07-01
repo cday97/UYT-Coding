@@ -1,0 +1,20 @@
+---
+title: "wages_app"
+output: html_document
+---
+
+```{r, include=FALSE}
+library(shiny)
+library(shinydashboard)
+library(rsconnect)
+library(DT)
+library(shinyjs)
+```
+
+```{r}
+runApp("C:/Users/chris/Documents/UYT/UYT-Coding/app/")
+#rsconnect::setAccountInfo(name='christopher-day',
+#			  token='97E167C1B1D004E635C5A0254D1DAB48',
+#			  secret='R75mSgxdu5uC1PCPJNnfwGGSBRh+AGnwdpEd6NE7')
+rsconnect::deployApp('app', appName = 'uytwages')
+```
