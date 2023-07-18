@@ -9,6 +9,12 @@ library(shinydashboard)
 library(rsconnect)
 library(DT)
 library(shinyjs)
+library(RCurl)
+library(readxl)
+library(stringr)
+library(tidyverse)
+library(googlesheets4)
+source('app/wages-functions.R')
 ```
 
 ```{r}
