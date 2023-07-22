@@ -114,6 +114,8 @@ create_advanced_wages_report <- function(sheet_sum, wages_clean, weekSelect){
     left_join(filt_advanced_wages_report, by = c('Name', 'Position', 'PayRate')) %>%
     mutate(BONUS = as.numeric(BONUS)) %>%
     mutate_all(~ ifelse(is.na(.), 0, .)) %>%
+    mutate(Email = ifelse(Email == '0','', Email),
+           Team = ifelse(Team == '0', '', Team)) %>%
     mutate(weekSelect2 = weekSelect) %>%
     mutate(PayFinal = ifelse(weekSelect2 == 'Week 11', PayFinal + BONUS, PayFinal)) %>%
     select(Position, Name, Email, Team, PayRate, Hours, Training, DRIVE, BONUS, PayFinal)
@@ -160,10 +162,8 @@ create_gigwage_report <- function(sheet_sum, wages_clean, weekSelect){
     mutate(Reason = paste0(Hours, " coaching hours plus money from training, drive stipend, or bonus if applicable."),
            "Mark as reimbursement" = NA,
            "External ID" = NA) %>%
-    mutate("First Name" = sub("^(\\S+).*", "\\1", Name),
-           "Last Name" = sub("^\\S+\\s(.*)", "\\1", Name)) %>%
     rename("Amount" = "PayFinal") %>%
-    select('Name','First Name', 'Last Name', 'Amount', 'Reason', 'Mark as reimbursement', 'External ID')
+    select('Name','Amount', 'Reason', 'Mark as reimbursement', 'External ID')
   
   final_gigwage_report <- wages_email %>%
     left_join(gigwage_report, by = c('Name')) %>%
@@ -171,7 +171,11 @@ create_gigwage_report <- function(sheet_sum, wages_clean, weekSelect){
     mutate(BONUS = ifelse(is.na(BONUS), 0, BONUS)) %>%
     mutate(weekSelect2 = weekSelect) %>%
     mutate(Amount = ifelse(weekSelect2 == 'Week 11', Amount + BONUS, Amount)) %>%
-    select(-BONUS,-weekSelect2)
+    select(-BONUS,-weekSelect2) %>%
+    mutate("First Name" = sub("^(\\S+).*", "\\1", Name),
+           "Last Name" = sub("^\\S+\\s(.*)", "\\1", Name)) %>%
+    mutate_all(~ifelse(is.na(.), "", .)) %>%
+    select('Name', 'First Name', 'Last Name', 'Amount', 'Reason', 'Mark as reimbursement', 'External ID')
   # fix first name and last name!
   # get rid of nas, maybe empty strings?
   
@@ -204,7 +208,7 @@ create_gigwage_report <- function(sheet_sum, wages_clean, weekSelect){
 #'     - Input box for onedrive link and google form sheet and other inputs?
 #'     - Does the wages sheet have to be the second sheet? Or does that not matter?
 #'  - Make sure outputs are correct
-#'  - Clean up outputs (Gigwage has a bunch of NAs)
+#'  - Bi-weekly summary option for gigwage report
 #'  .
   
 

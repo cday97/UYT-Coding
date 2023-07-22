@@ -13,6 +13,10 @@ ui <- fluidPage(
   titlePanel("UYT Wages Summary"),
   sidebarLayout(
     sidebarPanel(
+      textInput("google_link", "Link to Google Form Responses:", 
+                value = "https://docs.google.com/spreadsheets/d/18G9ArS_7QZwekcBk5qancZwKV2wSEE-uzv8wITX16QU/edit?resourcekey#gid=246854673"),
+      textInput("outlook_embed_link", "Embed Link to Onedrive Wages Sheet:",
+                value = "<iframe src=\"https://onedrive.live.com/embed?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116285&authkey=APUfF8vex2OTSaU&em=2\" width=\"402\" height=\"346\" frameborder=\"0\" scrolling=\"no\"></iframe>"),
       selectInput("week", "Select Week:", 
                   choices = c("Week 1", "Week 2", "Week 3", "Week 4", "Week 5", 
                               "Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Week 11"), #Other
@@ -27,21 +31,38 @@ ui <- fluidPage(
     )
   )
 )
-
 server <- function(input, output) {
+  # Create a reactiveValues to store the data
+  data <- reactiveValues()
+  
+  # Function to read the wages sheet when input$outlook_embed_link changes
+  observeEvent(input$outlook_embed_link, {
+    data$sheet1 <- read_wages_sheet(input$outlook_embed_link)
+  })
+  
+  # Function to read form responses when input$google_link changes
+  observeEvent(input$google_link, {
+    data$form_responses <- read_form_responses(input$google_link)
+  })
+  
   tableData <- reactive({
+    # Check if data is available
+    if (is.null(data$sheet1) || is.null(data$form_responses)) {
+      return(NULL)
+    }
     
-    # Perform filtering and create a sample table
-    sheet1 <- read_wages_sheet('<iframe src="https://onedrive.live.com/embed?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116285&authkey=APUfF8vex2OTSaU&em=2" width="402" height="346" frameborder="0" scrolling="no"></iframe>')
-    form_responses <- read_form_responses("https://docs.google.com/spreadsheets/d/18G9ArS_7QZwekcBk5qancZwKV2wSEE-uzv8wITX16QU/edit?resourcekey#gid=246854673")
-    final_adv_report <- create_advanced_wages_report(form_responses,sheet1,input$week)
+    final_adv_report <- create_advanced_wages_report(data$form_responses, data$sheet1, input$week)
     final_report <- create_wages_report(final_adv_report)
-    final_gw_report <- create_gigwage_report(form_responses, sheet1, input$week)
+    final_gw_report <- create_gigwage_report(data$form_responses, data$sheet1, input$week)
     
     filtered_df <- final_adv_report
-    if (input$type == "Wages"){filtered_df <- final_report}
-    if (input$type == "Advanced Wages"){filtered_df <- final_adv_report}
-    if (input$type == 'Gigwage'){filtered_df <- final_gw_report}
+    if (input$type == "Wages") {
+      filtered_df <- final_report
+    } else if (input$type == "Advanced Wages") {
+      filtered_df <- final_adv_report
+    } else if (input$type == 'Gigwage') {
+      filtered_df <- final_gw_report
+    }
     
     filtered_df
   })
@@ -49,7 +70,7 @@ server <- function(input, output) {
   output$tableOutput <- renderDT({
     tableData()
   })
-
+  
   output$downloadButton <- downloadHandler(
     filename = function() {
       paste0(gsub(" ", "-", tolower(input$type)), "-", gsub(" ", "-", tolower(input$week)), ".csv")
@@ -59,6 +80,7 @@ server <- function(input, output) {
     },
     contentType = "text/csv")
 }
+
 
 shinyApp(ui = ui, server = server)
 
