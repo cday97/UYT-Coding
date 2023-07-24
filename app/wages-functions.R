@@ -30,7 +30,7 @@ clean_wages_table <- function(wages){
 }
 
 # Grab the Wages Sheet
-#fall23_embed_link <- '<iframe src="https://onedrive.live.com/embed?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116285&authkey=APUfF8vex2OTSaU&em=2" width="402" height="346" frameborder="0" scrolling="no"></iframe>'
+fall23_embed_link <- '<iframe src="https://onedrive.live.com/embed?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116285&authkey=APUfF8vex2OTSaU&em=2" width="402" height="346" frameborder="0" scrolling="no"></iframe>'
 read_wages_sheet <- function(fall23_embed_link){
   
   wages <- get_wages_table(fall23_embed_link)
@@ -128,7 +128,6 @@ create_wages_report <- function(final_advanced_wages_report){
   final_wages_report <- final_advanced_wages_report %>%
     select(Name, Position, PayFinal)
 }
-
 create_gigwage_report <- function(sheet_sum, wages_clean, weekSelect){
   weeks2thru7 <- c("Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7")
   wages_cleaner <- wages_clean %>%
@@ -154,6 +153,7 @@ create_gigwage_report <- function(sheet_sum, wages_clean, weekSelect){
   
   gigwage_report <- advanced_wages_report %>%
     ungroup() %>%
+    filter(Week == weekSelect) %>%
     group_by(Name) %>%
     summarize(Hours = sum(Hours), 
               Training = sum(Training), 

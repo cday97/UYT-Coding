@@ -61,6 +61,7 @@ server <- function(input, output) {
     } else if (input$type == "Advanced Wages") {
       filtered_df <- final_adv_report
     } else if (input$type == 'Gigwage') {
+      # THIS IS NOT UPDATING WHEN I CLICK BETWEEN WEEK 1 AND WEEK2, but the wages and advanced wages is. WHY???
       filtered_df <- final_gw_report
     }
     
