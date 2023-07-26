@@ -175,7 +175,86 @@ create_gigwage_report <- function(sheet_sum, wages_clean, weekSelect){
     mutate("First Name" = sub("^(\\S+).*", "\\1", Name),
            "Last Name" = sub("^\\S+\\s(.*)", "\\1", Name)) %>%
     mutate_all(~ifelse(is.na(.), "", .)) %>%
-    select('Name', 'First Name', 'Last Name', 'Amount', 'Reason', 'Mark as reimbursement', 'External ID')
+    select('Name', 'First Name', 'Last Name', 'Amount', 'Reason', 'Mark as reimbursement', 'External ID') %>%
+    mutate(Amount = ifelse(Amount == '', 0, Amount))
+  # fix first name and last name!
+  # get rid of nas, maybe empty strings?
+  
+  return(final_gigwage_report)
+  
+  
+}
+
+create_gigwage_biweek_report <- function(sheet_sum, wages_clean, weekSelect){
+  weeks2thru7 <- c("Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7")
+  wages_cleaner <- wages_clean %>%
+    select(Position, Name, Email, Team, PayRate, BONUS)
+  wages_email <- wages_cleaner %>%
+    select(Name, Email, BONUS) %>% unique()
+  
+  advanced_wages_report <-  sheet_sum %>%
+    left_join(wages_clean, by = c("Name",'Position')) %>%
+    select(-BONUS) %>%
+    filter(Hours > 0) %>%
+    mutate(PayRate = as.numeric(PayRate),
+           DRIVE = as.numeric(DRIVE),
+           Training = as.numeric(Training)) %>%
+    mutate(Training = ifelse(is.na(Training), 0, Training),
+           DRIVE = ifelse(is.na(DRIVE), 0, DRIVE)) %>%
+    mutate(PayFinal = case_when(
+      Week == 'Week 1' ~ ((Hours + Training) * PayRate),
+      Week %in% weeks2thru7 ~ (Hours * PayRate) + (DRIVE / 6),
+      TRUE ~ (Hours * PayRate)
+    )) %>%
+    select(Week, Name, Position, Hours, PayRate, Training, DRIVE, PayFinal)
+  
+  gigwage_report <- advanced_wages_report %>%
+    ungroup() %>%
+    mutate(BiWeek = case_when(
+      Week %in% c('Week 1', 'Week 2') ~ 'Weeks 1 & 2',
+      Week %in% c('Week 3', 'Week 4') ~ 'Weeks 3 & 4',
+      Week %in% c('Week 5', 'Week 6') ~ 'Weeks 5 & 6',
+      Week %in% c('Week 7', 'Week 8') ~ 'Weeks 7 & 8',
+      Week %in% c('Week 9', 'Week 10') ~ 'Weeks 9 & 10',
+      Week %in% c('Week 11', 'Week 12') ~ 'Weeks 11 & 12',
+      TRUE ~ 'Week > 12'
+    ),
+    BiWeekSelect = ifelse(weekSelect == 'Week 1', 'Weeks 1 & 2',
+                          ifelse(weekSelect == 'Week 2', 'Weeks 1 & 2',
+                                 ifelse(weekSelect == 'Week 3', 'Weeks 3 & 4',
+                                        ifelse(weekSelect == 'Week 4', 'Weeks 3 & 4',
+                                               ifelse(weekSelect == 'Week 5', 'Weeks 5 & 6',
+                                                      ifelse(weekSelect == 'Week 6', 'Weeks 5 & 6',
+                                                             ifelse(weekSelect == 'Week 7', 'Weeks 7 & 8',
+                                                                    ifelse(weekSelect == 'Week 8', 'Weeks 7 & 8',
+                                                                           ifelse(weekSelect == 'Week 9', 'Weeks 9 & 10',
+                                                                                  ifelse(weekSelect == 'Week 10', 'Weeks 9 & 10',
+                                                                                         ifelse(weekSelect == 'Week 11', 'Weeks 11 & 12',
+                                                                                                ifelse(weekSelect == 'Week 12', 'Weeks 11 & 12'))))))))))))) %>%
+    filter(BiWeek == BiWeekSelect) %>%
+    group_by(Name) %>%
+    summarize(Hours = sum(Hours), 
+              Training = sum(Training), 
+              DRIVE = sum(DRIVE),
+              PayFinal = sum(PayFinal)) %>%
+    mutate(Reason = paste0(Hours, " coaching hours plus money from training, drive stipend, or bonus if applicable."),
+           "Mark as reimbursement" = NA,
+           "External ID" = NA) %>%
+    rename("Amount" = "PayFinal") %>%
+    select('Name','Amount', 'Reason', 'Mark as reimbursement', 'External ID')
+  
+  final_gigwage_report <- wages_email %>%
+    left_join(gigwage_report, by = c('Name')) %>%
+    mutate(BONUS = as.numeric(BONUS)) %>%
+    mutate(BONUS = ifelse(is.na(BONUS), 0, BONUS)) %>%
+    mutate(weekSelect2 = weekSelect) %>%
+    mutate(Amount = ifelse(weekSelect2 == 'Week 11', Amount + BONUS, Amount)) %>%
+    select(-BONUS,-weekSelect2) %>%
+    mutate("First Name" = sub("^(\\S+).*", "\\1", Name),
+           "Last Name" = sub("^\\S+\\s(.*)", "\\1", Name)) %>%
+    mutate_all(~ifelse(is.na(.), "", .)) %>%
+    select('Name', 'First Name', 'Last Name', 'Amount', 'Reason', 'Mark as reimbursement', 'External ID') %>%
+    mutate(Amount = ifelse(Amount == '', 0, Amount))
   # fix first name and last name!
   # get rid of nas, maybe empty strings?
   

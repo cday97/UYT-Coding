@@ -22,7 +22,7 @@ ui <- fluidPage(
                               "Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Week 11"), #Other
                   selected = "Week 1"),
       selectInput("type", "Select Report:",
-                  choices = c("Wages", "Advanced Wages", "Gigwage"),
+                  choices = c("Wages", "Advanced Wages", "Gigwage Weekly", "Gigwage BiWeekly"),
                   selected = "Wages"),
       downloadButton("downloadButton", "Download Table")  # Add a download button
     ),
@@ -54,17 +54,17 @@ server <- function(input, output) {
     final_adv_report <- create_advanced_wages_report(data$form_responses, data$sheet1, input$week)
     final_report <- create_wages_report(final_adv_report)
     final_gw_report <- create_gigwage_report(data$form_responses, data$sheet1, input$week)
+    final_gw_bw_report <- create_gigwage_biweek_report(data$form_responses, data$sheet1, input$week)
     
     filtered_df <- final_adv_report
     if (input$type == "Wages") {
       filtered_df <- final_report
     } else if (input$type == "Advanced Wages") {
       filtered_df <- final_adv_report
-    } else if (input$type == 'Gigwage') {
-      # THIS IS NOT UPDATING WHEN I CLICK BETWEEN WEEK 1 AND WEEK2, but the wages and advanced wages is. WHY???
+    } else if (input$type == 'Gigwage Weekly') {
       filtered_df <- final_gw_report
-    }
-    
+    } else if (input$type == 'Gigwage BiWeekly')
+      filtered_df <- final_gw_bw_report
     filtered_df
   })
   
