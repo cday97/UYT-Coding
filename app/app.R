@@ -9,22 +9,46 @@ library(googlesheets4)
 source('wages-functions.R')
 
 ui <- fluidPage(
-  shinyjs::useShinyjs(),  # Enable shinyjs
   titlePanel("UYT Wages Summary"),
   sidebarLayout(
     sidebarPanel(
-      textInput("google_link", "Link to Google Form Responses:", 
-                value = "https://docs.google.com/spreadsheets/d/18G9ArS_7QZwekcBk5qancZwKV2wSEE-uzv8wITX16QU/edit?resourcekey#gid=246854673"),
-      textInput("outlook_embed_link", "Embed Link to Onedrive Wages Sheet:",
-                value = "<iframe src=\"https://onedrive.live.com/embed?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116285&authkey=APUfF8vex2OTSaU&em=2\" width=\"402\" height=\"346\" frameborder=\"0\" scrolling=\"no\"></iframe>"),
+      tags$div(
+        style = "position: relative;",
+        textInput("google_link", "Link to Google Form Responses:", 
+                  value = "https://docs.google.com/spreadsheets/d/18G9ArS_7QZwekcBk5qancZwKV2wSEE-uzv8wITX16QU/edit?resourcekey#gid=246854673"),
+        tags$span(
+          class = "info-icon",
+          style = "position: absolute; top: 25%; left: 100%; transform: translate(-10px, -50%); cursor: pointer;",
+          HTML("&nbsp;&#9432;"),  
+          title = "Enter the link to the Google Form Responses spreadsheet. Make sure it's accessible."
+        )
+      ),
+      
+      tags$div(
+        style = "position: relative;",
+        textInput("outlook_embed_link", "Embed Link to Onedrive Wages Sheet:",
+                  value = "<iframe src=\"https://onedrive.live.com/embed?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116285&authkey=APUfF8vex2OTSaU&em=2\" width=\"402\" height=\"346\" frameborder=\"0\" scrolling=\"no\"></iframe>"),
+        tags$span(
+          class = "info-icon",
+          style = "position: absolute; top: 25%; left: 100%; transform: translate(-10px, -50%); cursor: pointer;",
+          HTML("&nbsp;&#9432;"),
+          title = "Enter the embed link to the Onedrive Wages Sheet. Ensure it's accessible."
+        )
+      ),
+      
       selectInput("week", "Select Week:", 
                   choices = c("Week 1", "Week 2", "Week 3", "Week 4", "Week 5", 
                               "Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Week 11", "Week 12"), #Other
                   selected = "Week 1"),
+      
       selectInput("type", "Select Report:",
                   choices = c("Wages", "Advanced Wages", "Gigwage Weekly", "Gigwage BiWeekly"),
                   selected = "Wages"),
+      
+      # Larger download button
+      tags$style(HTML(".btn.btn-primary { font-size: 20px; padding: 10px 20px; }")),
       downloadButton("downloadButton", "Download Table")  # Add a download button
+      
     ),
     mainPanel(
       DTOutput("tableOutput")
