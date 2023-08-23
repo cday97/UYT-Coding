@@ -19,7 +19,7 @@ ui <- fluidPage(
                 value = "<iframe src=\"https://onedrive.live.com/embed?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116285&authkey=APUfF8vex2OTSaU&em=2\" width=\"402\" height=\"346\" frameborder=\"0\" scrolling=\"no\"></iframe>"),
       selectInput("week", "Select Week:", 
                   choices = c("Week 1", "Week 2", "Week 3", "Week 4", "Week 5", 
-                              "Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Week 11"), #Other
+                              "Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Week 11", "Week 12"), #Other
                   selected = "Week 1"),
       selectInput("type", "Select Report:",
                   choices = c("Wages", "Advanced Wages", "Gigwage Weekly", "Gigwage BiWeekly"),
@@ -31,7 +31,7 @@ ui <- fluidPage(
     )
   )
 )
-server <- function(input, output) {
+server <- function(input, output, session) {
   # Create a reactiveValues to store the data
   data <- reactiveValues()
   
@@ -44,6 +44,45 @@ server <- function(input, output) {
   observeEvent(input$google_link, {
     data$form_responses <- read_form_responses(input$google_link)
   })
+  
+  observe({
+    # Update the choices of the "Select Week" input based on the selected report
+    if (input$type != "Gigwage BiWeekly") {
+      updateSelectInput(session, "week", 
+                        label = "Select Week:",
+                        choices = c("Week 1", "Week 2", "Week 3", "Week 4", "Week 5", 
+                                    "Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Week 11", "Week 12"),
+                        selected = input$week)
+    } else if (input$type == "Gigwage BiWeekly") {
+      # Determine the corresponding week group based on the selected week
+      week_group <- switch(input$week,
+                           "Week 1" = "Week 1 & 2",
+                           "Week 2" = "Week 1 & 2",
+                           "Week 3" = "Week 3 & 4",
+                           "Week 4" = "Week 3 & 4",
+                           "Week 5" = "Week 5 & 6",
+                           "Week 6" = "Week 5 & 6",
+                           "Week 7" = "Week 7 & 8",
+                           "Week 8" = "Week 7 & 8",
+                           "Week 9" = "Week 9 & 10",
+                           "Week 10" = "Week 9 & 10",
+                           "Week 11" = "Week 11 & 12",
+                           "Week 12" = "Week 11 & 12",
+                           "Week 1 & 2" = "Week 1 & 2",
+                           "Week 3 & 4" = "Week 3 & 4",
+                           "Week 5 & 6" = "Week 5 & 6",
+                           "Week 7 & 8" = "Week 7 & 8",
+                           "Week 9 & 10" = "Week 9 & 10",
+                           "Week 11 & 12" = "Week 11 & 12")
+      
+      updateSelectInput(session, "week", 
+                        label = "Select Week:",
+                        choices = c("Week 1 & 2", "Week 3 & 4", "Week 5 & 6", "Week 7 & 8",
+                                    "Week 9 & 10", "Week 11 & 12"), 
+                        selected = week_group)
+    }
+  })
+  
   
   tableData <- reactive({
     # Check if data is available
@@ -82,8 +121,8 @@ server <- function(input, output) {
     contentType = "text/csv")
 }
 
-
 shinyApp(ui = ui, server = server)
+
 
 
 

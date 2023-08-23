@@ -118,7 +118,9 @@ create_advanced_wages_report <- function(sheet_sum, wages_clean, weekSelect){
            Team = ifelse(Team == '0', '', Team)) %>%
     mutate(weekSelect2 = weekSelect) %>%
     mutate(PayFinal = ifelse(weekSelect2 == 'Week 11', PayFinal + BONUS, PayFinal)) %>%
-    select(Position, Name, Email, Team, PayRate, Hours, Training, DRIVE, BONUS, PayFinal)
+    mutate("Drive1/6" = DRIVE / 6) %>%
+    select(Position, Name, Email, Team, PayRate, Training, 'Drive1/6', BONUS, Hours, PayFinal)
+    #select(Position, Name, Email, Team, PayRate, Hours, Training, DRIVE, BONUS, PayFinal)
   
   return(final_advanced_wages_report)
   
@@ -126,7 +128,7 @@ create_advanced_wages_report <- function(sheet_sum, wages_clean, weekSelect){
 
 create_wages_report <- function(final_advanced_wages_report){
   final_wages_report <- final_advanced_wages_report %>%
-    select(Name, Position, PayFinal)
+    select(Name, Position, Hours, PayFinal)
 }
 create_gigwage_report <- function(sheet_sum, wages_clean, weekSelect){
   weeks2thru7 <- c("Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7")
@@ -175,10 +177,8 @@ create_gigwage_report <- function(sheet_sum, wages_clean, weekSelect){
     mutate("First Name" = sub("^(\\S+).*", "\\1", Name),
            "Last Name" = sub("^\\S+\\s(.*)", "\\1", Name)) %>%
     mutate_all(~ifelse(is.na(.), "", .)) %>%
-    select('Name', 'First Name', 'Last Name', 'Amount', 'Reason', 'Mark as reimbursement', 'External ID') %>%
+    select('First Name', 'Last Name', 'Amount', 'Reason', 'Mark as reimbursement', 'External ID') %>%
     mutate(Amount = ifelse(Amount == '', 0, Amount))
-  # fix first name and last name!
-  # get rid of nas, maybe empty strings?
   
   return(final_gigwage_report)
   
@@ -211,27 +211,15 @@ create_gigwage_biweek_report <- function(sheet_sum, wages_clean, weekSelect){
   gigwage_report <- advanced_wages_report %>%
     ungroup() %>%
     mutate(BiWeek = case_when(
-      Week %in% c('Week 1', 'Week 2') ~ 'Weeks 1 & 2',
-      Week %in% c('Week 3', 'Week 4') ~ 'Weeks 3 & 4',
-      Week %in% c('Week 5', 'Week 6') ~ 'Weeks 5 & 6',
-      Week %in% c('Week 7', 'Week 8') ~ 'Weeks 7 & 8',
-      Week %in% c('Week 9', 'Week 10') ~ 'Weeks 9 & 10',
-      Week %in% c('Week 11', 'Week 12') ~ 'Weeks 11 & 12',
+      Week %in% c('Week 1', 'Week 2') ~ 'Week 1 & 2',
+      Week %in% c('Week 3', 'Week 4') ~ 'Week 3 & 4',
+      Week %in% c('Week 5', 'Week 6') ~ 'Week 5 & 6',
+      Week %in% c('Week 7', 'Week 8') ~ 'Week 7 & 8',
+      Week %in% c('Week 9', 'Week 10') ~ 'Week 9 & 10',
+      Week %in% c('Week 11', 'Week 12') ~ 'Week 11 & 12',
       TRUE ~ 'Week > 12'
-    ),
-    BiWeekSelect = ifelse(weekSelect == 'Week 1', 'Weeks 1 & 2',
-                          ifelse(weekSelect == 'Week 2', 'Weeks 1 & 2',
-                                 ifelse(weekSelect == 'Week 3', 'Weeks 3 & 4',
-                                        ifelse(weekSelect == 'Week 4', 'Weeks 3 & 4',
-                                               ifelse(weekSelect == 'Week 5', 'Weeks 5 & 6',
-                                                      ifelse(weekSelect == 'Week 6', 'Weeks 5 & 6',
-                                                             ifelse(weekSelect == 'Week 7', 'Weeks 7 & 8',
-                                                                    ifelse(weekSelect == 'Week 8', 'Weeks 7 & 8',
-                                                                           ifelse(weekSelect == 'Week 9', 'Weeks 9 & 10',
-                                                                                  ifelse(weekSelect == 'Week 10', 'Weeks 9 & 10',
-                                                                                         ifelse(weekSelect == 'Week 11', 'Weeks 11 & 12',
-                                                                                                ifelse(weekSelect == 'Week 12', 'Weeks 11 & 12'))))))))))))) %>%
-    filter(BiWeek == BiWeekSelect) %>%
+    )) %>%
+    filter(BiWeek == weekSelect) %>%
     group_by(Name) %>%
     summarize(Hours = sum(Hours), 
               Training = sum(Training), 
