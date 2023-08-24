@@ -17,7 +17,7 @@ ui <- fluidPage(
     sidebarPanel(
       tags$div(
         style = "position: relative;",
-        textInput("google_link", "Link to Google Form Responses:", 
+        textInput("google_link", "Enter Google Form Link:", 
                   value = ""),
         tags$span(
           class = "info-icon",
@@ -29,7 +29,7 @@ ui <- fluidPage(
       
       tags$div(
         style = "position: relative;",
-        textInput("outlook_embed_link", "Embed Link to Onedrive Wages Sheet:",
+        textInput("outlook_embed_link", "Enter OneDrive Embed Link:",
                   value = ""),
         tags$span(
           class = "info-icon",
