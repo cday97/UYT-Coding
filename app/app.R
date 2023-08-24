@@ -42,7 +42,7 @@ ui <- fluidPage(
                   selected = "Week 1"),
       
       selectInput("type", "Select Report:",
-                  choices = c("Wages", "Advanced Wages", "Gigwage Weekly", "Gigwage BiWeekly"),
+                  choices = c("Wages", "Advanced Wages", "Gigwage Weekly", "Gigwage Biweekly"),
                   selected = "Wages"),
       
       # Larger download button
@@ -71,13 +71,13 @@ server <- function(input, output, session) {
   
   observe({
     # Update the choices of the "Select Week" input based on the selected report
-    if (input$type != "Gigwage BiWeekly") {
+    if (input$type != "Gigwage Biweekly") {
       updateSelectInput(session, "week", 
                         label = "Select Week:",
                         choices = c("Week 1", "Week 2", "Week 3", "Week 4", "Week 5", 
                                     "Week 6", "Week 7", "Week 8", "Week 9", "Week 10", "Week 11", "Week 12"),
                         selected = input$week)
-    } else if (input$type == "Gigwage BiWeekly") {
+    } else if (input$type == "Gigwage Biweekly") {
       # Determine the corresponding week group based on the selected week
       week_group <- switch(input$week,
                            "Week 1" = "Week 1 & 2",
@@ -116,7 +116,7 @@ server <- function(input, output, session) {
     
     final_adv_report <- create_advanced_wages_report(data$form_responses, data$sheet1, input$week)
     final_report <- create_wages_report(final_adv_report)
-    final_gw_report <- create_gigwage_report(data$form_responses, data$sheet1, input$week)
+    final_gw_report <- create_gigwage_report(final_adv_report, data$sheet1, input$week)
     final_gw_bw_report <- create_gigwage_biweek_report(data$form_responses, data$sheet1, input$week)
     
     filtered_df <- final_adv_report
@@ -126,7 +126,7 @@ server <- function(input, output, session) {
       filtered_df <- final_adv_report
     } else if (input$type == 'Gigwage Weekly') {
       filtered_df <- final_gw_report
-    } else if (input$type == 'Gigwage BiWeekly')
+    } else if (input$type == 'Gigwage Biweekly')
       filtered_df <- final_gw_bw_report
     filtered_df
   })

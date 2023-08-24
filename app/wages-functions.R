@@ -26,7 +26,17 @@ clean_wages_table <- function(wages){
   wages_clean <- wages_clean %>%
     rename('BONUS' = 'Hours') %>%
     drop_na(Name)
-  wages_clean
+  wages_clean %>% 
+    select(-BONUS) %>%
+    mutate(
+      Position = ifelse(is.na(Position), '', as.character(Position)),
+      Name = ifelse(is.na(Name), '', as.character(Name)),
+      Email = ifelse(is.na(Email), '', as.character(Email)),
+      Team = ifelse(is.na(Team), '', as.character(Team)),
+      PayRate = ifelse(is.na(PayRate), 0, as.numeric(PayRate)),
+      Training = ifelse(is.na(Training), 0, as.numeric(Training)),
+      DRIVE = ifelse(is.na(DRIVE), 0, as.numeric(DRIVE))
+    )
 }
 
 # Grab the Wages Sheet
@@ -73,114 +83,87 @@ read_form_responses <- function(answer_sheet_link){
   sheet_sum <- raw_sheet_long %>%
     group_by(Week, Name, Position) %>%
     summarize(Hours = sum(Hours)) %>%
-    mutate(Hours = ifelse(is.na(Hours),0,Hours))
+    mutate(
+      Hours = ifelse(is.na(Hours),0,as.numeric(Hours)),
+      Week = ifelse(is.na(Week), '', as.character(Week)),
+      Name = ifelse(is.na(Name), '', as.character(Name)),
+      Position = ifelse(is.na(Position), '', as.character(Position))
+    )
   
   return(sheet_sum)
+  
+  ## write error script that won't proceed if there are multiple "Position / Name" Combos (Like Middle School and Saige right now)
   
 }
 
 
 create_advanced_wages_report <- function(sheet_sum, wages_clean, weekSelect){
   weeks2thru7 <- c("Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7")
+  
   wages_cleaner <- wages_clean %>%
-    select(Position, Name, Email, Team, PayRate, BONUS)
-  wages_email <- wages_cleaner %>%
-    select(Name, Email, BONUS) %>% unique()
+    mutate(selectedWeek = weekSelect) %>%
+    mutate(Training = ifelse(selectedWeek == 'Week 1', Training, 0),
+           Drive16 = ifelse(selectedWeek %in% weeks2thru7, DRIVE / 6, 0)) %>%
+    select(Position, Name, Email, Team, PayRate, Training, Drive16,DRIVE, selectedWeek)
   
-  advanced_wages_report <-  sheet_sum %>%
-    left_join(wages_clean, by = c("Name",'Position')) %>%
-    select(-BONUS) %>%
-    filter(Hours > 0) %>%
-    mutate(PayRate = as.numeric(PayRate),
-           DRIVE = as.numeric(DRIVE),
-           Training = as.numeric(Training)) %>%
-    mutate(Training = ifelse(is.na(Training), 0, Training),
-           DRIVE = ifelse(is.na(DRIVE), 0, DRIVE)) %>%
-    mutate(PayFinal = case_when(
-      Week == 'Week 1' ~ ((Hours + Training) * PayRate),
-      Week %in% weeks2thru7 ~ (Hours * PayRate) + (DRIVE / 6),
-      TRUE ~ (Hours * PayRate)
-    )) %>%
-    select(Week, Name, Position, Hours, PayRate, Training, DRIVE, PayFinal)
-  
-  
-  filt_advanced_wages_report <- advanced_wages_report %>%
-    ungroup() %>%
+  mid_advanced_wages_report <- wages_cleaner %>% 
+    left_join(sheet_sum, by = c('Name','Position')) %>%
     filter(Week == weekSelect) %>%
-    select(-Week)
+    select(Position, Name,  Hours, Week)
+    
+  
+  completed <- mid_advanced_wages_report %>% select(Name) %>% unique()
+  completed_list <- as.list(completed$Name)
   
   final_advanced_wages_report <- wages_cleaner %>%
-    mutate(PayRate = as.numeric(PayRate)) %>%
-    left_join(filt_advanced_wages_report, by = c('Name', 'Position', 'PayRate')) %>%
-    mutate(BONUS = as.numeric(BONUS)) %>%
-    mutate_all(~ ifelse(is.na(.), 0, .)) %>%
-    mutate(Email = ifelse(Email == '0','', Email),
-           Team = ifelse(Team == '0', '', Team)) %>%
-    mutate(weekSelect2 = weekSelect) %>%
-    #mutate(PayFinal = ifelse(weekSelect2 == 'Week 11', PayFinal + BONUS, PayFinal)) %>%
-    mutate("Drive1/6" = ifelse(weekSelect2 %in% weeks2thru7, DRIVE / 6, 0)) %>%
-    select(Position, Name, Email, Team, PayRate, Training, 'Drive1/6', Hours, PayFinal)
-    #select(Position, Name, Email, Team, PayRate, Hours, Training, DRIVE, BONUS, PayFinal)
+    left_join(mid_advanced_wages_report, by = c('Name','Position')) %>%
+    mutate(Training = ifelse(is.na(Training), 0, Training),
+           Hours = ifelse(is.na(Hours), 0, Hours)) %>%
+    mutate(PayFinal = (Hours + Training) * PayRate + Drive16) %>%
+    mutate(CompletedReport = ifelse(!(Name %in% completed_list), 'No', 'Yes')) %>%
+    select(Position,Name,Email,Team,PayRate,Hours,Training,Drive16,PayFinal,CompletedReport)
   
   return(final_advanced_wages_report)
   
 }
 
+
 create_wages_report <- function(final_advanced_wages_report){
   final_wages_report <- final_advanced_wages_report %>%
     select(Name, Position, Hours, PayFinal)
 }
-create_gigwage_report <- function(sheet_sum, wages_clean, weekSelect){
+create_gigwage_report <- function(final_advanced_wages_report,wages_clean, weekSelect){
   weeks2thru7 <- c("Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7")
-  wages_cleaner <- wages_clean %>%
-    select(Position, Name, Email, Team, PayRate, BONUS)
-  wages_email <- wages_cleaner %>%
-    select(Name, Email, BONUS) %>% unique()
+  wages_email <- wages_clean %>%
+    select(Name, Email) %>% unique()
   
-  advanced_wages_report <-  sheet_sum %>%
-    left_join(wages_clean, by = c("Name",'Position')) %>%
-    select(-BONUS) %>%
-    filter(Hours > 0) %>%
-    mutate(PayRate = as.numeric(PayRate),
-           DRIVE = as.numeric(DRIVE),
-           Training = as.numeric(Training)) %>%
-    mutate(Training = ifelse(is.na(Training), 0, Training),
-           DRIVE = ifelse(is.na(DRIVE), 0, DRIVE)) %>%
-    mutate(PayFinal = case_when(
-      Week == 'Week 1' ~ ((Hours + Training) * PayRate),
-      Week %in% weeks2thru7 ~ (Hours * PayRate) + (DRIVE / 6),
-      TRUE ~ (Hours * PayRate)
-    )) %>%
-    select(Week, Name, Position, Hours, PayRate, Training, DRIVE, PayFinal)
-  
-  gigwage_report <- advanced_wages_report %>%
-    ungroup() %>%
-    filter(Week == weekSelect) %>%
-    group_by(Name, Week) %>%
+  gigwage_report <- final_advanced_wages_report %>%
+    group_by(Name) %>%
     summarize(Hours = sum(Hours), 
               Training = sum(Training), 
-              DRIVE = sum(DRIVE),
+              Drive16 = sum(Drive16),
               PayFinal = sum(PayFinal)) %>%
-    mutate(Drive16 = ifelse(Week %in% weeks2thru7, DRIVE / 6, 0),
-           Training1 = ifelse(Week == 'Week 1', Training, 0)) %>%
-    mutate(Reason = paste0(Hours, " coaching hours + ", Training1, " training hours + $", Drive16,  " from 1/6 drive stipend."),
+    mutate(Week = weekSelect,
+           ReasonWeek1 = paste0(Hours, " coaching hours + ", Training, " training hours."),
+           ReasonWeek27 = paste0(Hours, " coaching hours + $", Drive16,  " from 1/6th of drive stipend."),
+           Reason7P = paste0(Hours, " coaching hours."),
            "Mark as reimbursement" = NA,
            "External ID" = NA) %>%
     rename("Amount" = "PayFinal") %>%
+    mutate(Reason = case_when(
+            Week == 'Week 1' ~ ReasonWeek1,
+            Week %in% weeks2thru7 ~ ReasonWeek27,
+            TRUE ~ Reason7P)) %>%
     select('Name','Amount', 'Reason', 'Mark as reimbursement', 'External ID')
   
   final_gigwage_report <- wages_email %>%
     left_join(gigwage_report, by = c('Name')) %>%
-    mutate(BONUS = as.numeric(BONUS)) %>%
-    mutate(BONUS = ifelse(is.na(BONUS), 0, BONUS)) %>%
-    mutate(weekSelect2 = weekSelect) %>%
-    #mutate(Amount = ifelse(weekSelect2 == 'Week 11', Amount + BONUS, Amount)) %>%
-    select(-BONUS,-weekSelect2) %>%
     mutate("First Name" = sub("^(\\S+).*", "\\1", Name),
            "Last Name" = sub("^\\S+\\s(.*)", "\\1", Name)) %>%
     mutate_all(~ifelse(is.na(.), "", .)) %>%
     select('First Name', 'Last Name', 'Amount', 'Reason', 'Mark as reimbursement', 'External ID') %>%
-    mutate(Amount = ifelse(Amount == '', 0, Amount))
+    mutate(Amount = ifelse(Amount == '', 0, Amount)) %>%
+    mutate(Amount = as.numeric(Amount))
   
   return(final_gigwage_report)
   
@@ -189,29 +172,22 @@ create_gigwage_report <- function(sheet_sum, wages_clean, weekSelect){
 
 create_gigwage_biweek_report <- function(sheet_sum, wages_clean, weekSelect){
   weeks2thru7 <- c("Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7")
+  
   wages_cleaner <- wages_clean %>%
-    select(Position, Name, Email, Team, PayRate, BONUS)
+    mutate(selectedWeek = weekSelect) %>%
+    mutate(Training = ifelse(selectedWeek == 'Week 1 & 2', Training, 0),
+           Drive16 = case_when(
+             selectedWeek == 'Week 1 & 2' ~ DRIVE / 6,
+             selectedWeek == 'Week 3 & 4' ~ DRIVE / 3,
+             selectedWeek == 'Week 5 & 6' ~ DRIVE / 3,
+             selectedWeek == 'Week 7 & 8' ~ DRIVE / 6,
+             TRUE ~ 0)) %>%
+    select(Position, Name, Email, Team, PayRate, Training, Drive16,DRIVE, selectedWeek)
+
   wages_email <- wages_cleaner %>%
-    select(Name, Email, BONUS) %>% unique()
+    select(Name, Email) %>% unique()
   
-  advanced_wages_report <-  sheet_sum %>%
-    left_join(wages_clean, by = c("Name",'Position')) %>%
-    select(-BONUS) %>%
-    filter(Hours > 0) %>%
-    mutate(PayRate = as.numeric(PayRate),
-           DRIVE = as.numeric(DRIVE),
-           Training = as.numeric(Training)) %>%
-    mutate(Training = ifelse(is.na(Training), 0, Training),
-           DRIVE = ifelse(is.na(DRIVE), 0, DRIVE)) %>%
-    mutate(PayFinal = case_when(
-      Week == 'Week 1' ~ ((Hours + Training) * PayRate),
-      Week %in% weeks2thru7 ~ (Hours * PayRate) + (DRIVE / 6),
-      TRUE ~ (Hours * PayRate)
-    )) %>%
-    select(Week, Name, Position, Hours, PayRate, Training, DRIVE, PayFinal)
-  
-  gigwage_report <- advanced_wages_report %>%
-    ungroup() %>%
+  sheet_sum_bw <- sheet_sum %>%
     mutate(BiWeek = case_when(
       Week %in% c('Week 1', 'Week 2') ~ 'Week 1 & 2',
       Week %in% c('Week 3', 'Week 4') ~ 'Week 3 & 4',
@@ -220,46 +196,62 @@ create_gigwage_biweek_report <- function(sheet_sum, wages_clean, weekSelect){
       Week %in% c('Week 9', 'Week 10') ~ 'Week 9 & 10',
       Week %in% c('Week 11', 'Week 12') ~ 'Week 11 & 12',
       TRUE ~ 'Week > 12'
-    )) %>%
+    ))
+  
+  
+  mid <- wages_cleaner %>% 
+    left_join(sheet_sum_bw, by = c('Name','Position')) %>%
     filter(BiWeek == weekSelect) %>%
-    group_by(Name, BiWeek) %>%
-    summarize(Hours = sum(Hours), 
-              Training = max(Training), 
-              DRIVE = max(DRIVE),
+    select(Position, Name,  Hours, BiWeek)
+  
+  completed <- mid %>% select(Name) %>% unique()
+  completed_list <- as.list(completed$Name)
+  
+  final_advanced_wages_report <- wages_cleaner %>%
+    left_join(mid, by = c('Name','Position')) %>%
+    mutate(Training = ifelse(is.na(Training), 0, Training),
+           Hours = ifelse(is.na(Hours), 0, Hours)) %>%
+    mutate(Note = ifelse(!(Name %in% completed_list), 'Did not complete report', ''))
+  
+  gigwage_bw_report <- final_advanced_wages_report %>%
+    group_by(Name, Position) %>%
+    summarize(Hours = sum(Hours),       #HACKY FIX
+              Training = max(Training), #training is double counted when left joining in 'final_advanced_wages_report' object
+              Drive16 = max(Drive16), # drive16 is double counted when left joining in 'final_advanced_wages_report' object
+              PayRate = max(PayRate)) %>% #since its double counted, we need to single count it in a new grouping and then recalculate the PayFinal
+    ungroup() %>%
+    mutate(PayFinal = (Hours + Training) * PayRate + Drive16) %>% #recalculate PayFinal with newly calculated single Training and Drive16
+    group_by(Name) %>%
+    summarize(Hours = sum(Hours), # now complete the final summarizing of the values
+              Training = sum(Training),
+              Drive16 = sum(Drive16),
               PayFinal = sum(PayFinal)) %>%
-    mutate(Drive16 = case_when(
-      BiWeek == 'Week 1 & 2' ~ DRIVE / 6,
-      BiWeek == 'Week 3 & 4' ~ DRIVE /3,
-      BiWeek == 'Week 5 & 6' ~ DRIVE / 3,
-      BiWeek == 'Week 7 & 8' ~ DRIVE / 6,
-      TRUE ~ 0
-    ),
-      Training1 = ifelse(BiWeek == 'Week 1 & 2', Training, 0)) %>%
-    mutate(Reason = paste0(Hours, " coaching hours + ", Training1, " training hours + $", Drive16,  " from 1/6 drive stipend."),
+    mutate(Week = weekSelect,
+           ReasonWeek12 = paste0(Hours, " coaching hours + ", Training, " training hours + $", Drive16, " from drive stipend"),
+           ReasonWeek26 = paste0(Hours, " coaching hours + $", Drive16,  " from drive stipend."),
+           ReasonWeek78 = paste0(Hours, " coaching hours + $", Drive16,  " from drive stipend."),
+           ReasonWeek9P = paste0(Hours, " coaching hours."),
            "Mark as reimbursement" = NA,
            "External ID" = NA) %>%
     rename("Amount" = "PayFinal") %>%
+    mutate(Reason = case_when(
+      Week == 'Week 1 & 2' ~ ReasonWeek12,
+      Week %in% c('Week 3 & 4', 'Week 5 & 6') ~ ReasonWeek26,
+      Week == 'Week 7 & 8' ~ ReasonWeek78,
+      TRUE ~ ReasonWeek9P)) %>%
     select('Name','Amount', 'Reason', 'Mark as reimbursement', 'External ID')
   
-  final_gigwage_report <- wages_email %>%
-    left_join(gigwage_report, by = c('Name')) %>%
-    mutate(BONUS = as.numeric(BONUS)) %>%
-    mutate(BONUS = ifelse(is.na(BONUS), 0, BONUS)) %>%
-    mutate(weekSelect2 = weekSelect) %>%
-    #mutate(Amount = ifelse(weekSelect2 == 'Week 11', Amount + BONUS, Amount)) %>%
-    select(-BONUS,-weekSelect2) %>%
+  final_gigwage_bw_report <- wages_email %>%
+    left_join(gigwage_bw_report, by = c('Name')) %>%
     mutate("First Name" = sub("^(\\S+).*", "\\1", Name),
            "Last Name" = sub("^\\S+\\s(.*)", "\\1", Name)) %>%
     mutate_all(~ifelse(is.na(.), "", .)) %>%
     select('First Name', 'Last Name', 'Amount', 'Reason', 'Mark as reimbursement', 'External ID') %>%
-    mutate(Amount = ifelse(Amount == '', 0, Amount))
-  # fix first name and last name!
-  # get rid of nas, maybe empty strings?
+    mutate(Amount = ifelse(Amount == '', 0, Amount)) %>%
+    mutate(Amount = as.numeric(Amount))
   
-  return(final_gigwage_report)
-  
+  return(final_gigwage_bw_report)
 }
-
 
 
   

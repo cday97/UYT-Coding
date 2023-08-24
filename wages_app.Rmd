@@ -14,10 +14,10 @@ library(readxl)
 library(stringr)
 library(tidyverse)
 library(googlesheets4)
-source('app/wages-functions.R')
 ```
 
 ```{r}
+source('app/wages-functions.R')
 runApp("C:/Users/chris/Documents/projects/UYT-Coding/app/")
 #rsconnect::setAccountInfo(name='christopher-day',
 #			  token='97E167C1B1D004E635C5A0254D1DAB48',
