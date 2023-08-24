@@ -40,7 +40,7 @@ clean_wages_table <- function(wages){
 }
 
 # Grab the Wages Sheet
-fall23_embed_link <- '<iframe src="https://onedrive.live.com/embed?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116285&authkey=APUfF8vex2OTSaU&em=2" width="402" height="346" frameborder="0" scrolling="no"></iframe>'
+#fall23_embed_link <- '<iframe src="https://onedrive.live.com/embed?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116285&authkey=APUfF8vex2OTSaU&em=2" width="402" height="346" frameborder="0" scrolling="no"></iframe>'
 read_wages_sheet <- function(fall23_embed_link){
   
   wages <- get_wages_table(fall23_embed_link)
@@ -94,6 +94,20 @@ read_form_responses <- function(answer_sheet_link){
   
   ## write error script that won't proceed if there are multiple "Position / Name" Combos (Like Middle School and Saige right now)
   
+}
+
+check_for_duplicates <- function(sheet_sum) {
+  sheet_sum2 <- sheet_sum %>%
+    mutate(dup = paste0(Position,"/",Name)) %>% 
+    select(dup) %>% 
+    duplicated()
+  
+  if (any(sheet_sum2)) {
+    duplicated_rows <- sheet_sum[sheet_sum2, ]
+    duplicated_combos <- with(duplicated_rows, paste(Position, Name, sep = "/"))
+    error_message <- paste("The Wages Sheet includes at least one duplicated value of Position/Name combo. Please ensure there is only one Name per Position in the Wages Sheet.\n\n Duplicated values are: \n", paste("-->  ", duplicated_combos, collapse = "\n"))
+    stop(error_message)
+  }
 }
 
 

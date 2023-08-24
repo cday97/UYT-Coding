@@ -8,6 +8,9 @@ library(tidyverse)
 library(googlesheets4)
 source('wages-functions.R')
 
+#https://docs.google.com/spreadsheets/d/18G9ArS_7QZwekcBk5qancZwKV2wSEE-uzv8wITX16QU/edit?resourcekey#gid=246854673
+#<iframe src="https://onedrive.live.com/embed?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116285&authkey=APUfF8vex2OTSaU&em=2" width="402" height="346" frameborder="0" scrolling="no"></iframe>
+
 ui <- fluidPage(
   titlePanel("UYT Wages Summary"),
   sidebarLayout(
@@ -15,7 +18,7 @@ ui <- fluidPage(
       tags$div(
         style = "position: relative;",
         textInput("google_link", "Link to Google Form Responses:", 
-                  value = "https://docs.google.com/spreadsheets/d/18G9ArS_7QZwekcBk5qancZwKV2wSEE-uzv8wITX16QU/edit?resourcekey#gid=246854673"),
+                  value = ""),
         tags$span(
           class = "info-icon",
           style = "position: absolute; top: 25%; left: 100%; transform: translate(-10px, -50%); cursor: pointer;",
@@ -27,7 +30,7 @@ ui <- fluidPage(
       tags$div(
         style = "position: relative;",
         textInput("outlook_embed_link", "Embed Link to Onedrive Wages Sheet:",
-                  value = "<iframe src=\"https://onedrive.live.com/embed?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116285&authkey=APUfF8vex2OTSaU&em=2\" width=\"402\" height=\"346\" frameborder=\"0\" scrolling=\"no\"></iframe>"),
+                  value = ""),
         tags$span(
           class = "info-icon",
           style = "position: absolute; top: 25%; left: 100%; transform: translate(-10px, -50%); cursor: pointer;",
@@ -61,12 +64,34 @@ server <- function(input, output, session) {
   
   # Function to read the wages sheet when input$outlook_embed_link changes
   observeEvent(input$outlook_embed_link, {
-    data$sheet1 <- read_wages_sheet(input$outlook_embed_link)
+    if (input$outlook_embed_link == "") {
+      # Link has been deleted, set data to NULL
+      data$sheet1 <- NULL
+    } else {
+      # Try to read the sheet, display an error if it fails
+      tryCatch({
+        data$sheet1 <- read_wages_sheet(input$outlook_embed_link)
+      }, error = function(e) {
+        data$sheet1 <- NULL
+        showNotification("Invalid Outlook Embed Link. Please check the link.", type = "error")
+      })
+    }
   })
   
   # Function to read form responses when input$google_link changes
   observeEvent(input$google_link, {
-    data$form_responses <- read_form_responses(input$google_link)
+    if (input$google_link == "") {
+      # Link has been deleted, set data to NULL
+      data$form_responses <- NULL
+    } else {
+      # Try to read the form responses, display an error if it fails
+      tryCatch({
+        data$form_responses <- read_form_responses(input$google_link)
+      }, error = function(e) {
+        data$form_responses <- NULL
+        showNotification("Invalid Google Form Responses Link. Please check the link.", type = "error")
+      })
+    }
   })
   
   observe({
@@ -114,11 +139,13 @@ server <- function(input, output, session) {
       return(NULL)
     }
     
+    check_for_duplicates(data$sheet1)
     final_adv_report <- create_advanced_wages_report(data$form_responses, data$sheet1, input$week)
     final_report <- create_wages_report(final_adv_report)
     final_gw_report <- create_gigwage_report(final_adv_report, data$sheet1, input$week)
     final_gw_bw_report <- create_gigwage_biweek_report(data$form_responses, data$sheet1, input$week)
     
+
     filtered_df <- final_adv_report
     if (input$type == "Wages") {
       filtered_df <- final_report
