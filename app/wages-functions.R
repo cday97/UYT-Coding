@@ -78,7 +78,8 @@ read_form_responses <- function(answer_sheet_link){
     pivot_longer(!c(Name,Week), names_to = 'Position', values_to='Hours') %>%
     mutate(Practice = stringr::word(Position,2,sep='-')) %>%
     mutate(Position = stringr::word(Position,1,sep='-')) %>%
-    mutate(Week = str_remove(Week, " \\(.*$"))
+    mutate(Week = str_remove(Week, " \\(.*$")) %>%
+    mutate(Hours = ifelse(is.na(Hours),0,as.numeric(Hours)))
   
   sheet_sum <- raw_sheet_long %>%
     group_by(Week, Name, Position) %>%
@@ -161,21 +162,21 @@ create_gigwage_report <- function(final_advanced_wages_report,wages_clean, weekS
            ReasonWeek1 = paste0(Hours, " coaching hours + ", Training, " training hours."),
            ReasonWeek27 = paste0(Hours, " coaching hours + $", Drive16,  " from 1/6th of drive stipend."),
            Reason7P = paste0(Hours, " coaching hours."),
-           "Mark as reimbursement" = NA,
-           "External ID" = NA) %>%
+           "Mark as reimbursement?" = NA,
+           "Job ID" = NA) %>%
     rename("Amount" = "PayFinal") %>%
     mutate(Reason = case_when(
             Week == 'Week 1' ~ ReasonWeek1,
             Week %in% weeks2thru7 ~ ReasonWeek27,
             TRUE ~ Reason7P)) %>%
-    select('Name','Amount', 'Reason', 'Mark as reimbursement', 'External ID')
+    select('Name','Amount', 'Reason', 'Mark as reimbursement?', 'Job ID')
   
   final_gigwage_report <- wages_email %>%
     left_join(gigwage_report, by = c('Name')) %>%
-    mutate("First Name" = sub("^(\\S+).*", "\\1", Name),
+    mutate("First name" = sub("^(\\S+).*", "\\1", Name),
            "Last Name" = sub("^\\S+\\s(.*)", "\\1", Name)) %>%
     mutate_all(~ifelse(is.na(.), "", .)) %>%
-    select('First Name', 'Last Name', 'Amount', 'Reason', 'Mark as reimbursement', 'External ID') %>%
+    select('First name', 'Last Name','Email', 'Amount', 'Reason', 'Mark as reimbursement?', 'Job ID') %>%
     mutate(Amount = ifelse(Amount == '', 0, Amount)) %>%
     mutate(Amount = as.numeric(Amount))
   
@@ -245,22 +246,22 @@ create_gigwage_biweek_report <- function(sheet_sum, wages_clean, weekSelect){
            ReasonWeek26 = paste0(Hours, " coaching hours + $", Drive16,  " from drive stipend."),
            ReasonWeek78 = paste0(Hours, " coaching hours + $", Drive16,  " from drive stipend."),
            ReasonWeek9P = paste0(Hours, " coaching hours."),
-           "Mark as reimbursement" = NA,
-           "External ID" = NA) %>%
+           "Mark as reimbursement?" = NA,
+           "Job ID" = NA) %>%
     rename("Amount" = "PayFinal") %>%
     mutate(Reason = case_when(
       Week == 'Week 1 & 2' ~ ReasonWeek12,
       Week %in% c('Week 3 & 4', 'Week 5 & 6') ~ ReasonWeek26,
       Week == 'Week 7 & 8' ~ ReasonWeek78,
       TRUE ~ ReasonWeek9P)) %>%
-    select('Name','Amount', 'Reason', 'Mark as reimbursement', 'External ID')
+    select('Name','Amount', 'Reason', 'Mark as reimbursement?', 'Job ID')
   
   final_gigwage_bw_report <- wages_email %>%
     left_join(gigwage_bw_report, by = c('Name')) %>%
-    mutate("First Name" = sub("^(\\S+).*", "\\1", Name),
+    mutate("First name" = sub("^(\\S+).*", "\\1", Name),
            "Last Name" = sub("^\\S+\\s(.*)", "\\1", Name)) %>%
     mutate_all(~ifelse(is.na(.), "", .)) %>%
-    select('First Name', 'Last Name', 'Amount', 'Reason', 'Mark as reimbursement', 'External ID') %>%
+    select('First name', 'Last Name', 'Email', 'Amount', 'Reason', 'Mark as reimbursement?', 'Job ID') %>%
     mutate(Amount = ifelse(Amount == '', 0, Amount)) %>%
     mutate(Amount = as.numeric(Amount))
   
@@ -295,10 +296,34 @@ create_gigwage_biweek_report <- function(sheet_sum, wages_clean, weekSelect){
   
 
 
+#test <- read_form_responses('https://docs.google.com/spreadsheets/d/1a5Uv9-JNJxwXujMxU-PPyH_lVTjwYSdR2aujcbXiQuY/edit?resourcekey#gid=451295547')
 
-
-
-
-
+#raw_sheet_important <- read_csv('testanswers-as.csv') %>%
+#  select('Name', 'What week are you reporting?', 
+#         'Middle School Practice Hours', 'Middle School Match Hours', 'Middle School MAKEUP/SUBBING Section',
+#         'Elementary School Practice', 'Elementary School Match', 'Elementary School MAKEUP/SUBBING SECTION', 
+#         'High School Practice Hours', 'High School Match Hours', 'High School MAKEUP/SUBBING SECTION',
+#         'Red Ball Lessons', 'Adult Lessons') %>%
+#  rename('Week' = 2, 'Middle School-Practice' = 3, 'Middle School-Match' = 4, 'Middle School-Sub' = 5,
+#         'Elementary School-Practice' = 6, 'Elementary School-Match' = 7, 'Elementary School-Sub' = 8,
+#         'High School-Practice' = 9, 'High School-Match' = 10, 'High School-Sub' = 11,
+#         'Red Ball' = 12, 'Adult Lessons' = 13)
+#
+#raw_sheet_long <- raw_sheet_important %>%
+#  pivot_longer(!c(Name,Week), names_to = 'Position', values_to='Hours') %>%
+#  mutate(Practice = stringr::word(Position,2,sep='-')) %>%
+#  mutate(Position = stringr::word(Position,1,sep='-')) %>%
+#  mutate(Week = str_remove(Week, " \\(.*$")) %>%
+#  mutate(Hours = ifelse(is.na(Hours),0,as.numeric(Hours)))
+#
+#sheet_sum <- raw_sheet_long %>%
+#  group_by(Week, Name, Position) %>%
+#  summarize(Hours = sum(Hours)) %>%
+#  mutate(
+#    Hours = ifelse(is.na(Hours),0,as.numeric(Hours)),
+#    Week = ifelse(is.na(Week), '', as.character(Week)),
+#    Name = ifelse(is.na(Name), '', as.character(Name)),
+#    Position = ifelse(is.na(Position), '', as.character(Position))
+#  )
 # old
 #spring23_link <- "https://onedrive.live.com/download?cid=4F786D9BAAACD460&resid=4F786D9BAAACD460%2116178&authkey=AHSOroECuYE6pd0&em=2"
